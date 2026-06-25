@@ -26,8 +26,8 @@ function inferMeta(rows){
 }
 const sections = [
   {key:'open', label:'Open Squad', start:7, count:5, leftTotalRow:12, rightTotalRow:12, type:'open'},
-  {key:'composite', label:'Composite Squad', start:18, count:3, leftTotalRow:21, rightTotalRow:21, type:'open'},
-  {key:'development', label:'Development Squad', start:27, count:2, leftTotalRow:29, rightTotalRow:29, type:'dev'}
+  {key:'composite', label:'Composite Squad', start:17, count:3, leftTotalRow:20, rightTotalRow:20, type:'open'},
+  {key:'development', label:'Development Squad', start:25, count:2, leftTotalRow:27, rightTotalRow:27, type:'dev'}
 ];
 function playerFrom(row, side, type){
   const offset = side==='left' ? 0 : 11;
@@ -51,7 +51,7 @@ function readTeam(rows, side, teamName){
     const complete = players.filter(p=>p.total>0).length;
     squads.push({...sec, players, total, complete});
   });
-  const sheetGrand = num((rows[32]||[])[side==='left'?9:20]);
+  const sheetGrand = num((rows[30]||[])[side==='left'?9:20]);
   return {name:teamName, squads, grand: sheetGrand || grand};
 }
 function buildData(rows){
