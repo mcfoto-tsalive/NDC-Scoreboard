@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NDC Live Scoreboard - Mobile</title>
+<style>
+:root{
+  --tsa-navy:#071426; --tsa-blue:#0b5ea8; --tsa-sky:#18a8e6; --tsa-red:#e5252a; --tsa-white:#f7fbff;
+  --panel:#0d2037; --panel2:#102943; --line:rgba(255,255,255,.16); --muted:#a9bed4; --gold:#ffd84d; --green:#34d399;
+}
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at top left,#123f6d 0,#071426 46%,#030912 100%);color:var(--tsa-white);font-family:Arial,Helvetica,sans-serif;overflow:auto}
+.wrap{min-height:100vh;padding:14px;display:grid;grid-template-rows:auto auto 1fr auto;gap:12px}
+.header{display:flex;align-items:center;justify-content:space-between;border-bottom:4px solid var(--tsa-red);padding-bottom:12px}
+.brand{font-weight:900;letter-spacing:.06em;font-size:34px;text-transform:uppercase}.sub{font-size:22px;color:var(--muted);margin-top:4px}.pill{background:linear-gradient(90deg,var(--tsa-red),var(--tsa-blue));padding:12px 18px;border-radius:999px;font-size:22px;font-weight:800}.leader{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:stretch}.teamScore{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:18px;padding:14px 18px}.teamScore h2{margin:0;font-size:34px}.teamScore .total{font-size:46px;font-weight:900;color:var(--gold);line-height:1}.teamScore.leading{box-shadow:0 0 0 3px rgba(52,211,153,.35) inset}.versus{display:flex;align-items:center;font-weight:900;color:var(--muted);font-size:28px}.margin{grid-column:1/4;text-align:center;font-size:26px;font-weight:800;color:var(--tsa-sky)}
+.board{display:grid;grid-template-columns:1fr;gap:14px;min-height:0}.teamPanel{background:rgba(7,20,38,.80);border:1px solid var(--line);border-radius:20px;overflow:hidden;display:flex;flex-direction:column}.teamTitle{background:linear-gradient(90deg,var(--tsa-blue),rgba(11,94,168,.25));padding:12px 18px;font-size:30px;font-weight:900;border-bottom:3px solid var(--tsa-red)}.section{padding:10px 14px;border-bottom:1px solid var(--line)}.sectionHead{display:flex;justify-content:space-between;align-items:center;font-size:22px;font-weight:900;color:#dff5ff;text-transform:uppercase;margin-bottom:4px}.sectionHead .won{color:var(--green)}table{width:100%;border-collapse:collapse;font-size:21px}th{color:var(--muted);font-size:16px;text-align:right;font-weight:700}th:first-child,td:first-child{text-align:left}td{padding:4px 6px;border-top:1px solid rgba(255,255,255,.08);text-align:right}td.name{font-weight:700}.junior{color:var(--gold);font-weight:900}.score{font-variant-numeric:tabular-nums;font-weight:800}.score.empty{color:#607992}.totalRow{display:flex;justify-content:space-between;padding:7px 6px 0;font-size:24px;font-weight:900}.teamFooter{margin-top:auto;background:rgba(229,37,42,.16);border-top:2px solid var(--tsa-red);padding:12px 18px;display:flex;justify-content:space-between;font-size:28px;font-weight:900}.footer{display:flex;justify-content:space-between;color:var(--muted);font-size:16px}.flash{animation:pulse 1.3s ease-in-out infinite alternate}@keyframes pulse{from{filter:brightness(1)}to{filter:brightness(1.35)}}
+@media(max-width:700px){.brand{font-size:20px}.sub{font-size:14px}.pill{font-size:14px;padding:8px 10px}.leader{grid-template-columns:1fr;gap:8px}.versus{display:none}.margin{grid-column:1;text-align:left;font-size:18px}.teamScore h2{font-size:21px}.teamScore .total{font-size:34px}.teamTitle{font-size:24px}table{font-size:15px}th{font-size:11px}td{padding:4px 3px}.sectionHead{font-size:17px}.totalRow{font-size:19px}.teamFooter{font-size:22px}.section{padding:8px 10px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header"><div><div class="brand">TSNZ National District Championship</div><div class="sub" id="matchTitle">Live match scoreboard</div></div><div class="pill">TSA LIVE</div></div>
+  <div class="leader" id="leader"></div>
+  <div class="board" id="board"></div>
+  <div class="footer"><span>Auto refreshes every 30 seconds</span><span id="updated">Loading…</span></div>
+</div>
+<script>
+const CSV_URL = 'scores.csv'; // Replace with your published Google Sheets CSV URL, or upload scores.csv beside this file.
+const REFRESH_MS = 30000;
+function parseCSV(text){const rows=[];let row=[],cell='',q=false;for(let i=0;i<text.length;i++){let c=text[i],n=text[i+1];if(q){if(c==='"'&&n==='"'){cell+='"';i++}else if(c==='"')q=false;else cell+=c}else{if(c==='"')q=true;else if(c===','){row.push(cell);cell=''}else if(c==='\n'){row.push(cell);rows.push(row);row=[];cell=''}else if(c!=='\r')cell+=c}}row.push(cell);rows.push(row);return rows}
+const clean=v=>(v??'').toString().trim();
+const isScore=s=>clean(s)&&!['0','0.0','0.00','0.000'].includes(clean(s));
+function scoreVal(s){s=clean(s); if(!isScore(s))return null; const [p,x='0']=s.split('.'); return Number(p||0)+Number(x||0)/1000}
+function formatScore(s){return isScore(s)?clean(s):'—'}
+function sideRows(rows, start, count, side){const off=side==='left'?0:11;return Array.from({length:count},(_,i)=>{const r=rows[start+i]||[];return {name:clean(r[3+off]),grade:clean(r[4+off]),junior:/true/i.test(clean(r[5+off])), scores:[clean(r[6+off]),clean(r[7+off]),clean(r[8+off])].filter((_,idx)=>!(count===2&&idx===0)), total:clean(r[9+off])}}).filter(x=>x.name&&x.name!=='#N/A')}
+function parse(rows){const title=clean(rows[0]?.[2])||'TSNZ National District Championship';const date=clean(rows[1]?.[4]);const cup=clean(rows[2]?.[2]);const round=clean(rows[2]?.[13]);const match=clean(rows[2]?.[23]);const teams=[clean(rows[3]?.[2])||'Team 1',clean(rows[3]?.[14])||'Team 2'];
+ const sections=[{key:'open',label:'Open Squad',count:5,row:7},{key:'composite',label:'Composite Squad',count:3,row:18},{key:'development',label:'Development Squad',count:2,row:26}];
+ const data={title,date,cup,round,match,teams:[{name:teams[0],sections:[],total:clean(rows[31]?.[9])},{name:teams[1],sections:[],total:clean(rows[31]?.[20])}],points:[]};
+ sections.forEach(s=>{let L=sideRows(rows,s.row,s.count,'left'), R=sideRows(rows,s.row,s.count,'right');let lt=clean(rows[s.row+s.count]?.[9]), rt=clean(rows[s.row+s.count]?.[20]);data.teams[0].sections.push({...s,rows:L,total:lt});data.teams[1].sections.push({...s,rows:R,total:rt})});return data}
+function sectionWinner(data,key){const a=data.teams[0].sections.find(s=>s.key===key), b=data.teams[1].sections.find(s=>s.key===key);const av=scoreVal(a.total),bv=scoreVal(b.total); if(av===null||bv===null||av===bv)return ''; return av>bv?data.teams[0].name:data.teams[1].name}
+function render(data){document.getElementById('matchTitle').textContent=[data.cup,data.round&&'Round '+data.round,data.match&&'Match '+data.match].filter(Boolean).join(' · ');
+ const v0=scoreVal(data.teams[0].total),v1=scoreVal(data.teams[1].total); const lead=v0!==null&&v1!==null&&v0!==v1?(v0>v1?0:1):null; const margin=lead!==null?Math.abs(v0-v1).toFixed(3).replace(/0$/,''):'Awaiting team scores';
+ document.getElementById('leader').innerHTML=`<div class="teamScore ${lead===0?'leading flash':''}"><h2>${data.teams[0].name}</h2><div class="total">${formatScore(data.teams[0].total)}</div></div><div class="versus">VS</div><div class="teamScore ${lead===1?'leading flash':''}"><h2>${data.teams[1].name}</h2><div class="total">${formatScore(data.teams[1].total)}</div></div><div class="margin">${lead===null?margin:data.teams[lead].name+' leading by '+margin}</div>`;
+ document.getElementById('board').innerHTML=data.teams.map(t=>`<div class="teamPanel"><div class="teamTitle">${t.name}</div>${t.sections.map(s=>{const winner=sectionWinner(data,s.key)===t.name;return `<div class="section"><div class="sectionHead"><span>${s.label}</span><span class="${winner?'won':''}">${winner?'WINNING':''}</span></div><table><thead><tr><th>Name</th><th>Gr</th><th>J</th><th>${s.count===2?'1st':'1x10'}</th><th>${s.count===2?'2nd':'1st 20'}</th><th>${s.count===2?'':'2nd 20'}</th><th>Total</th></tr></thead><tbody>${s.rows.map(r=>`<tr><td class="name">${r.name}</td><td>${r.grade}</td><td class="junior">${r.junior?'J':''}</td>${[0,1,2].map(i=>`<td class="score ${!isScore(r.scores[i])?'empty':''}">${formatScore(r.scores[i])}</td>`).join('')}<td class="score ${!isScore(r.total)?'empty':''}">${formatScore(r.total)}</td></tr>`).join('')}</tbody></table><div class="totalRow"><span>${s.label} Total</span><span>${formatScore(s.total)}</span></div></div>`}).join('')}<div class="teamFooter"><span>TEAM TOTAL</span><span>${formatScore(t.total)}</span></div></div>`).join('');
+ document.getElementById('updated').textContent='Updated '+new Date().toLocaleTimeString();}
+async function load(){try{const res=await fetch(CSV_URL+'?cachebust='+Date.now());const txt=await res.text();render(parse(parseCSV(txt)))}catch(e){document.getElementById('updated').textContent='Could not load CSV';console.error(e)}}
+load(); setInterval(load,REFRESH_MS);
+</script>
+</body>
+</html>
